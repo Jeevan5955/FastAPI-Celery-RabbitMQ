@@ -1,0 +1,6 @@
+python main.py
+celery -A main.celery worker --loglevel=info -Q dataCollection
+celery -A main.celery worker --loglevel=info -Q recordingSaving
+celery -A main.celery worker --loglevel=info -Q scedulerQueue
+celery -A main.celery flower --port=5555
+http://localhost:15672
