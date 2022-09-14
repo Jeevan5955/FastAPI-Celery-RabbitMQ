@@ -8,7 +8,8 @@ from datetime import datetime, timedelta
 import requests
 import redis
 import xmltodict
-from azure.storage.blob import BlockBlobService, PublicAccess
+from azure.storage.blob import BlobServiceClient
+import requests
 
 database = connection()
 
@@ -19,6 +20,7 @@ def distribution_of_data(data):
     saving_data_to_completeCallingInfo.apply_async(args=[data])
     if data["systemDisposition"] == "CONNECTED":
         saving_audio_to_azure_new.apply_async(args=[data["customerCRTId"], data["recordingFileUrl"]])
+        triggerPreprocessing.apply_async(args=[data["customerCRTId"]])
     else:
         pass
   
@@ -76,8 +78,7 @@ def exotel_meta_data_post(self,data):
 @shared_task(bind=True,autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5},
              name='dataCollection:Exotel Meta Data Get.')
 def exotel_meta_data_get(self,data):
-    print("Pass through Data recieved :",data)
-    
+    print("Pass through data :",data)
     POOL = redis.ConnectionPool(host='redis.saarthi.ai', port=6379,password='sAaRtH1at2o22')
     r = redis.StrictRedis(connection_pool=POOL, charset="utf-8", decode_responses=True)
     postCallData = data
@@ -171,21 +172,39 @@ def saving_data_to_completeCallingInfo(self,data):
 
 @shared_task(bind=True,autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5},
              name='recordingSaving:Saving audio to azure.')
-@shared_task(name='Saving audio to azure')
 def saving_audio_to_azure_new(self,sessionId, recordingFileUrl):
     r = requests.get(url=recordingFileUrl)
     try:
         if r.status_code in ['500',500,'502',502]:
             saving_audio_to_azure_new.delay(sessionId, recordingFileUrl)
         else:
-            block_blob_service = BlockBlobService(account_name="saarthistorage", account_key="IC7/YcmMOIadVgkhxNvXErJN4gJ7rmC+Mzvz5NkIWbYKXVvy7DoHHOP7w0JY5CURlHwndy8WsQ+LDl7VKDjkDw==;EndpointSuffix=core.windows.net")
+            block_blob_service = BlobServiceClient(account_name="saarthistorage", account_key="IC7/YcmMOIadVgkhxNvXErJN4gJ7rmC+Mzvz5NkIWbYKXVvy7DoHHOP7w0JY5CURlHwndy8WsQ+LDl7VKDjkDw==;EndpointSuffix=core.windows.net")
             container_name = "ameyocalls"
 
             response = requests.get(str(recordingFileUrl), stream=True)
             block_blob_service.create_blob_from_stream(container_name, str(sessionId)+'.mp3', response.raw)
     except Exception as e:
-        block_blob_service = BlockBlobService(account_name="saarthistorage", account_key="IC7/YcmMOIadVgkhxNvXErJN4gJ7rmC+Mzvz5NkIWbYKXVvy7DoHHOP7w0JY5CURlHwndy8WsQ+LDl7VKDjkDw==;EndpointSuffix=core.windows.net")
+        block_blob_service = BlobServiceClient(account_name="saarthistorage", account_key="IC7/YcmMOIadVgkhxNvXErJN4gJ7rmC+Mzvz5NkIWbYKXVvy7DoHHOP7w0JY5CURlHwndy8WsQ+LDl7VKDjkDw==;EndpointSuffix=core.windows.net")
         container_name = "ameyocalls"
 
         response = requests.get(str(recordingFileUrl), stream=True)
         block_blob_service.create_blob_from_stream(container_name, str(sessionId)+'.mp3', response.raw)
+
+
+@shared_task(bind=True,autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5},
+             name='dataCollection:Trigger preprocessing.')
+def triggerPreprocessing(self,sessionId):
+
+    url = "https://preprocessor.saarthi.ai/preprocessing/"
+
+    payload = json.dumps({
+    "sessionId": sessionId
+    })
+    headers = {
+    'accept': 'application/json',
+    'Content-Type': 'application/json'
+    }
+
+    response = requests.request("POST", url, headers=headers, data=payload)
+
+    print(response.text)
