@@ -18,7 +18,6 @@ redisCon= redisConnection()
 def distribution_of_data(data):
     data["talkTime"] = int(data["talkTime"])*1000
     data["ringingTime"] = int(data["ringingTime"])*1000
-    # print("distribution_of_data :",data)
     saving_data_to_completeCallingInfo.apply_async(args=[data])
     if data["systemDisposition"] == "CONNECTED":
         saving_audio_to_azure_new.apply_async(args=[data["customerCRTId"], data["recordingFileUrl"]])
@@ -30,7 +29,6 @@ def distribution_of_data(data):
 @shared_task(bind=True,autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5},
              name='dataCollection:Exotel Meta Data Post.')
 def exotel_meta_data_post(self,data):
-    print("Post Data recieved :",data)
     try:
         POOL = redis.ConnectionPool(host='redisengineering.redis.cache.windows.net', port=6379,password='QrtfUtgtqvZ5JmQlySiqJc3PkyHttrufqAzCaMMPbNg=')
         redisConnec = redis.StrictRedis(connection_pool=POOL, charset="utf-8", decode_responses=True)
@@ -92,7 +90,6 @@ def exotel_meta_data_post(self,data):
             bucketizationData['campaignId'] = customerData['campaignId']
         else:
             newdata["campaignId"] ='123'
-        # print("Post Data final :",newdata)
         redisConnec.incr(bucketizationData['callingId'])
         redisConnec.incr(newdata["campaignId"]+'-'+'portCounter')
         if postCallData['Status'] != "completed":
@@ -104,7 +101,6 @@ def exotel_meta_data_post(self,data):
                 publishMessageBucket(bucketizationData)
             else:
                 pass
-        # print("Inside preprocessingCode")
         telephonyDetails = list(database["telephonydetails"].find({'sessionId':data.CallSid}))
         if len(telephonyDetails) > 0:
             if newdata["recordingFileUrl"] != None:
@@ -124,8 +120,6 @@ def exotel_meta_data_post(self,data):
 @shared_task(bind=True,autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5},
              name='dataCollection:Exotel Meta Data Get.')
 def exotel_meta_data_get(self,data):
-    # print("Pass through data :",data)
-    # print("Pass through data type:",type(data))
     POOL = redis.ConnectionPool(host='redisengineering.redis.cache.windows.net', port=6379,password='QrtfUtgtqvZ5JmQlySiqJc3PkyHttrufqAzCaMMPbNg=')
     r = redis.StrictRedis(connection_pool=POOL, charset="utf-8", decode_responses=True)
     postCallData = data
@@ -168,7 +162,6 @@ def exotel_meta_data_get(self,data):
     else:
       newdata['customerId'] = "0"
     newdata["campaignId"] = "123"
-    # print("Exotel Meta Data Get :", newdata)
     telephonyDetails = list(database["telephonydetails"].find({'sessionId':postCallData['CallSid']}))
     if len(telephonyDetails) > 0:
         if newdata["recordingFileUrl"] != None:
@@ -176,21 +169,16 @@ def exotel_meta_data_get(self,data):
         else:
             pass
     else:
-        # print("Inside pass through Not exists")
         distribution_of_data(newdata)
         database["telephonydetails"].insert_one(newdata)
 
 @shared_task(bind=True,autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5},
              name='dataCollection:Saving data to Complete Calling Info')
 def saving_data_to_completeCallingInfo(self,data):
-    # print("Inside saving_data_to_completeCallingInfo :",data)
     try:
         if str(data['customerId']) == "0":
-            # print("check")
             pass
         else:
-            # print("inside")
-            # print("Data :",data)
             if data['client_details'].find('Testing') == -1:
                 URL = "https://connectors.saarthi.ai/campaign/api/campaignManagement/completeCallingInfo/v1/create" 
             else:
@@ -262,9 +250,7 @@ def saving_audio_to_azure_new(self,sessionId, recordingFileUrl):
 @shared_task(bind=True,autoretry_for=(Exception,), retry_backoff=True, retry_kwargs={"max_retries": 5},
              name='dataCollection:Trigger preprocessing.')
 def triggerPreprocessing(self,sessionId):
-
     url = "https://preprocessor.saarthi.ai/preprocessing/"
-
     payload = json.dumps({
     "sessionId": sessionId
     })
@@ -272,15 +258,11 @@ def triggerPreprocessing(self,sessionId):
     'accept': 'application/json',
     'Content-Type': 'application/json'
     }
-    # print("payload :",payload)
     response = requests.request("POST", url, headers=headers, data=payload)
-
-    # print(response.text)
 
 
 def publishMessageBucket(data):
     try:
-        # print("publishMessageBucket :",data)
         campaignData = json.loads(redisCon.get(data['campaignId']))
         
         if campaignData.get('disposition')!= None:
@@ -292,7 +274,7 @@ def publishMessageBucket(data):
                 if int(callingIdCount)+1 > maximumAttempt:
                     pass
                 else:
-                    url = "https://staging-bucketization.saarthi.ai/bucketlizationFastApi/bucketization/distribution"
+                    url = "https://bucketization.saarthi.ai/bucketlizationFastApi/bucketization/distribution"
                     newData = {
                         "data":data,
                         "minutes":mintues
@@ -304,11 +286,8 @@ def publishMessageBucket(data):
                     }
 
                     response = requests.request("POST", url, headers=headers, data=payload)
-
-                    # print(response.text)
         else:
             pass
     except Exception as e:
         pass
-        # print("publishMessageBucket exception :", e)
 

@@ -5,7 +5,6 @@ from fastapi import FastAPI
 
 from config.celery_utils import create_celery
 from routers import datacollection
-from database.database import dbConnection
 from dotenv import dotenv_values
 
 config = dotenv_values(".env")
@@ -27,11 +26,11 @@ celery = app.celery_app
 @app.on_event("startup")
 def startup_event():
     print("config :",config)
-    database = dbConnection(app, config)
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    app.mongodb_client.close()
+    print("Server shutdown")
+    pass
 
 @app.middleware("http")
 async def add_process_time_header(request, call_next):
