@@ -18,3 +18,9 @@ def connection():
     mongodb_client = MongoClient(config["ATLAS_URI"])
     database = mongodb_client[config["DB_NAME"]]
     return database
+
+def stagingconnection():
+    print("Triggered Connection")
+    mongodb_client = MongoClient(config["StagingURI"])
+    database = mongodb_client[config["DB_NAME"]]
+    return database
