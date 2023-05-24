@@ -3,6 +3,7 @@ import json
 import httpx
 
 
+#Get example to call external API
 def callGetApi(data: str) -> dict:
     url = 'http://universities.hipolabs.com/search'
     params = {}
@@ -11,6 +12,7 @@ def callGetApi(data: str) -> dict:
     response_json = json.loads(response.text)
     pass
 
+#Post example to call external API
 def callPostApi(data: str) -> dict:
     url = 'http://universities.hipolabs.com/search'
     params = {}
