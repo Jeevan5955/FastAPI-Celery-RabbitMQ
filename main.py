@@ -4,7 +4,7 @@ import uvicorn as uvicorn
 from fastapi import FastAPI
 
 from config.celery_utils import create_celery
-from routers import datacollection
+from routers import user
 from dotenv import dotenv_values
 
 config = dotenv_values(".env")
@@ -16,7 +16,7 @@ def create_app() -> FastAPI:
                           version="1.0.0", )
 
     current_app.celery_app = create_celery()
-    current_app.include_router(datacollection.router)
+    current_app.include_router(user.router)
     return current_app
 
 

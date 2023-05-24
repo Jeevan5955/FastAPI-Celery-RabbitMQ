@@ -3,28 +3,22 @@ from typing import List, Optional
 from pydantic import BaseModel
 
 
-class PreprocessingData(BaseModel):
-    sessionId: Optional[str] = None
+class CreateUpdateUser(BaseModel):
+    email: Optional[str] 
+    name: Optional[str] = None
+    mobileNumber: Optional[int] = None
+    age: Optional[int] = None
+    height: Optional[int] = None
 
     class Config:
         schema_extra = {
             "example": {
-                "sessionId": "123456",
+                "email": "njeevan@gmail.com",
+                "name": "Jeevan",
+                "mobileNumber": 8884974479,
+                "age": 24,
+                "height": 168
             }
         }
 
-class ExotelPost(BaseModel):
-    CallSid: Optional[str] = None
-    Status: Optional[str] = None
-    DateUpdated: Optional[str] = None
-
-    class Config:
-        
-        schema_extra = {
-            "example": {
-                'CallSid': '9fa644151797d8978f62dc0158f01698', 
-                'Status': 'busy', 
-                'DateUpdated': '2022-09-08 18:26:06'
-                }
-        }
 

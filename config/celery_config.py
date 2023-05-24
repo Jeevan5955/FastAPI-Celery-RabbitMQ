@@ -18,9 +18,7 @@ class BaseConfig:
         # default queue
         Queue("celery"),
         # custom queue
-        Queue("dataCollection"),
-        Queue("recordingSaving"),
-        Queue("scedulerQueue"),
+        Queue("user")
 
     )
 
